@@ -9,7 +9,7 @@ int selectCommand();
 int connectServer();
 void list(int sockfd);
 void retrieve(int sockfd);
-void store();
+void store(int sockfd);
 void quit();
 void error(char *msg)
 {
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
         }
         else if (i == 4)
         {
-            store();
+            store(sockfd);
         }
         else if (i == 5)
         {
@@ -162,9 +162,23 @@ void retrieve(int sockfd)
 	//memory management for file
     free(fileName);
 }
-void store()
+void store(int sockfd)
 {
-    printf("\nstore\n");
+	FILE *fp;
+	char buffer[255];
+    printf("\nEnter name of file to store: \n");
+    scanf("%s", buffer);
+    
+	//if user passes a valid file name, send the file
+	if (NULL != fopen(buffer, "r")){
+		fp = fopen(buffer, "r");}
+		write(sockfd, buffer, 255);
+		//puts contents of file into socket
+		while (fscanf(fp, "%s ", buffer) != EOF){
+			write(sockfd, buffer, 255);
+			write(sockfd, " ", 20);
+		}
+	//	write(sockfd, EOF, 255);
 }
 void quit()
 {
