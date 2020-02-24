@@ -7,7 +7,7 @@
 
 int selectCommand();
 int connectServer();
-void list();
+void list(int);
 void retrieve();
 void store();
 void quit();
@@ -20,17 +20,20 @@ void error(char *msg)
 int main(int argc, char *argv[])
 {
     int i = 0;
-    int sockfd;
+    int sockfd = 0;
     while (i >= 0)
     {
         i = selectCommand();
-        if (i == 1)
+        if (i == 1 && sockfd == 0)
         {
             sockfd = connectServer();
         }
+        else if(i == 1){
+            printf("\nAlready Connected\n");
+        }
         else if (i == 2)
         {
-            list();
+            list(sockfd);
         }
         else if (i == 3)
         {
@@ -107,9 +110,36 @@ int connectServer()
         error("ERROR connecting");
     return sockfd;
 }
-void list()
+void list(int sock)
 {
+    FILE *rf;
+    ssize_t len;
+    int fsize;
+    char size[255];
+    char buffer[255];
     printf("\nlist\n");
+    int n = 0;
+    n = write(sock, "2", 1);
+    if(n < 0){
+        error("ERROR writing to socket\n");
+    }
+    bzero(size, 255);
+    n = read(sock, size, 255);
+    if(n < 0){
+        error("ERROR reading from socket\n");
+    }
+    fsize = atoi(size);
+    printf("\nsize = %d\n", fsize);
+    //read data and write to file
+    rf = fopen("output.txt","w");
+    if(rf == NULL)
+        error("failed to open file\n");
+    while((fsize > 0) && ((len = recv(sock, buffer, 255, 0)) > 0)){
+        printf("\nmessage recieved:   %s \n", buffer);
+        fwrite(buffer, sizeof(char), len, rf);
+        fsize -= len;
+    }
+    fclose(rf);
 }
 void retrieve()
 {
