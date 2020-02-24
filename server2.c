@@ -8,7 +8,6 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <string.h>
 
 void dostuff(int); /* function prototype */
 void error(char *msg)
@@ -71,26 +70,6 @@ void dostuff (int sock)
    n = read(sock,buffer,255);
    if (n < 0) error("ERROR reading from socket");
    printf("Here is the message: %s\n",buffer);
-   
-   //start Olivia Code
-   FILE* fp; //file pointer for file created 
-   //checks if user inputs command 2 for list
-   if (buffer[0] == '2'){
-	  
-	   //puts all the output into 
-	   system("ls>> lsOutput.txt");
-	   fp = fopen("lsOutput.txt", "r");
-	   //next line sends file to client.  That one works
-	  n=send(sock, fp, sizeof(fp), 1);
-	  printf("%d", fp);
-	 // fputs( , "lsOutput.txt");  //DEBUG: uncomment and test
-	   if (n <0) printf("send didn't work\n");
-	   fclose(fp);
-	n = write(sock, "you entered list", 18);
-	if (n<0) error("You messed up a a ron");
-   }
-   
-   //end Olivia code
    n = write(sock,"I got your message",18);
    if (n < 0) error("ERROR writing to socket");
 }
