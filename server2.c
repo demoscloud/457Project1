@@ -8,6 +8,7 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <string.h>
 
 void dostuff(int); /* function prototype */
 void error(char *msg)
@@ -63,13 +64,48 @@ int main(int argc, char *argv[])
  *****************************************/
 void dostuff (int sock)
 {
+//	printf("entered doStuff\n");//debug line
    int n;
    char buffer[256];
-      
+   char b[255];
    bzero(buffer,256);
    n = read(sock,buffer,255);
    if (n < 0) error("ERROR reading from socket");
-   printf("Here is the message: %s\n",buffer);
-   n = write(sock,"I got your message",18);
-   if (n < 0) error("ERROR writing to socket");
+   //start Olivia Code
+   FILE* fp; //file pointer for file created 
+   //checks if user inputs command 2 for list
+   if ('2'== buffer[0]){
+	 //debug line
+	//printf("entered if statement for buffer[0] ==2\n"); 
+	   //puts all the output into a new file 
+	   system("rm dummyFile.txt");
+	   system("ls >> dummyFile.txt");
+	   fp = fopen("dummyFile.txt", "r");
+	  
+	while(fscanf(fp, "%s ", b)!= EOF ){
+	//	printf("%s\t", b );
+	//	printf("%s\n", b, buffer);
+	//	fscanf(fp,"%s", b);
+
+		n = write(sock, b, 255);
+		n = write(sock, " ", 255);	
+		if (n<0) error("fscanf failed to write to socket");
+	}	
+
+	fclose(fp);
+   }else {
+	printf("You have entered a the file name %s", buffer);
+	fp = fopen(buffer, "r");
+	//checks that input is valid file
+	if (fp != NULL){
+		while(fscanf(fp, "%s ", b) != EOF){
+			n = write(sock, b, 255);
+			n = write(sock, " ", 255);
+		}				
+	}
+      	fclose(fp);
+   } 
+   //end Olivia code
+  // n = write(sock,"I got your message",18);
+  // if (n < 0) error("ERROR writing to socket");
 }

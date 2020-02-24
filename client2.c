@@ -7,8 +7,8 @@
 
 int selectCommand();
 int connectServer();
-void list(int);
-void retrieve();
+void list(int sockfd);
+void retrieve(int sockfd);
 void store();
 void quit();
 void error(char *msg)
@@ -24,20 +24,20 @@ int main(int argc, char *argv[])
     while (i >= 0)
     {
         i = selectCommand();
-        if (i == 1 && sockfd == 0)
+	//only sets socket if user input is 1 and sockfd hasn't been connected prior
+        if (i == 1 && 0 == sockfd)
         {
             sockfd = connectServer();
         }
-        else if(i == 1){
-            printf("\nAlready Connected\n");
-        }
+	//list function
         else if (i == 2)
         {
+		if (0 != sockfd) //only attempts list function is socket has been connected
             list(sockfd);
         }
         else if (i == 3)
         {
-            retrieve();
+            retrieve(sockfd);
         }
         else if (i == 4)
         {
@@ -110,40 +110,57 @@ int connectServer()
         error("ERROR connecting");
     return sockfd;
 }
-void list(int sock)
+void list(int sockfd)
+
 {
-    FILE *rf;
-    ssize_t len;
-    int fsize;
-    char size[255];
-    char buffer[255];
-    printf("\nlist\n");
-    int n = 0;
-    n = write(sock, "2", 1);
-    if(n < 0){
-        error("ERROR writing to socket\n");
-    }
-    bzero(size, 255);
-    n = read(sock, size, 255);
-    if(n < 0){
-        error("ERROR reading from socket\n");
-    }
-    fsize = atoi(size);
-    printf("\nsize = %d\n", fsize);
-    //read data and write to file
-    rf = fopen("output.txt","w");
-    if(rf == NULL)
-        error("failed to open file\n");
-    while((fsize > 0) && ((len = recv(sock, buffer, 255, 0)) > 0)){
-        printf("\nmessage recieved:   %s \n", buffer);
-        fwrite(buffer, sizeof(char), len, rf);
-        fsize -= len;
-    }
-    fclose(rf);
+	//this is the file we write two
+	FILE* fp;
+	char buffer[255];
+	//opens the file
+	fp = fopen("gotThis.txt", "w");
+	//send a command to the server "2"
+	write(sockfd,"2", 18);
+	//reads from socket and outputs to screen
+	while ( read(sockfd, buffer, 255) > 0){
+       //prints file names from socket
+	printf("%s\n", buffer);
+	
+	fputs(buffer, fp);
+	}
+
+	fclose(fp);
+	//deletes unnecesary file
+	system("rm gotThis.txt");
+
+//	free(fp);
+    
 }
-void retrieve()
+void retrieve(int sockfd)
 {
     printf("\nretrieve\n");
+
+    FILE *fp;
+    char buffer[256];
+    char *fileName;	//name of file to be read in.  256 char limit
+    fileName = (char*) malloc(sizeof(255));
+    int c;
+
+    do {
+    scanf("%s", fileName);
+    write(sockfd,  fileName, 256);
+    fp= fopen(fileName, "w");
+	while (read (sockfd, buffer, 256) > 0){
+		fputs(buffer, fp);
+	}
+
+	c = fgetc(fp);//checks if character in file is empty
+//	if (c ==EOF){
+//	free(fp); //deletes empty file
+	}
+    while (c !=EOF || '3'== buffer[0]);
+	fclose(fp);
+	//memory management for file
+    free(fileName);
 }
 void store()
 {
