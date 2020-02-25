@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
         {
 		if (0 != sockfd) //only attempts list function is socket has been connected
             list(sockfd);
+		else i = 0;  //if not connected, goes back to the start of the loop and picks a new command
         }
         else if (i == 3)
         {
@@ -123,18 +124,19 @@ void list(int sockfd)
 	//reads from socket and outputs to screen
 	while ( read(sockfd, buffer, 255) > 0){
        //prints file names from socket
-	printf("%s\n", buffer);
+	printf("\n%s", buffer);
 	
 	fputs(buffer, fp);
 	}
-
+	//closes file
 	fclose(fp);
-	//deletes unnecesary file
+	//removes unnecessary file that has list of server's files
 	system("rm gotThis.txt");
-
-//	free(fp);
     
 }
+/**
+ * funciton to get a file from the server
+ * */
 void retrieve(int sockfd)
 {
     printf("\nretrieve\n");
@@ -146,22 +148,32 @@ void retrieve(int sockfd)
     int c;
 
     do {
-    scanf("%s", fileName);
-    write(sockfd,  fileName, 256);
-    fp= fopen(fileName, "w");
+	    //gets filename from upser
+	printf("Enter file name to retrieve: \n");
+	scanf("%s", fileName);
+	//sends file request to server
+	write(sockfd,  fileName, 256);
+	//creates file
+	fp= fopen(fileName, "w");
+	//scans input from socket until no more info is sent
 	while (read (sockfd, buffer, 256) > 0){
 		fputs(buffer, fp);
 	}
 
-	c = fgetc(fp);//checks if character in file is empty
+	c = fgetc(fp);//checks if last character in file is empty
 //	if (c ==EOF){
 //	free(fp); //deletes empty file
 	}
+    //if last character in file indicates the end of the file, it stops reading the file
     while (c !=EOF || '3'== buffer[0]);
 	fclose(fp);
-	//memory management for file
+	//memory management for file name and buffer
     free(fileName);
-}
+    }	    
+
+    /**
+     * store function moves file from client to server
+     * */
 void store(int sockfd)
 {
 	FILE *fp;
@@ -172,7 +184,17 @@ void store(int sockfd)
 	//if user passes a valid file name, send the file
 	if (NULL != fopen(buffer, "r")){
 		fp = fopen(buffer, "r");}
+		//sends a message to the server to go to the 'store' option
+		write(sockfd, "4", 20);
+		buffer[0]='0';
+		//keeps reading from the socket until the server is ready to recieve a file.
+		while ('0' == buffer[0]){
+			read(sockfd, buffer, 255);
+		}
+		//writes sends the file name to the server
 		write(sockfd, buffer, 255);
+		//slight pause
+		system("sleep 1s");
 		//puts contents of file into socket
 		while (fscanf(fp, "%s ", buffer) != EOF){
 			write(sockfd, buffer, 255);
