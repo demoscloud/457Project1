@@ -177,30 +177,34 @@ void retrieve(int sockfd)
 void store(int sockfd)
 {
 	FILE *fp;
-	char buffer[255];
+	char buffer[256] = {0};
+	char *fileName;
+	fileName = (char*) malloc(sizeof(255));
     printf("\nEnter name of file to store: \n");
-    scanf("%s", buffer);
+    scanf("%s", fileName);
     
 	//if user passes a valid file name, send the file
-	if (NULL != fopen(buffer, "r")){
-		fp = fopen(buffer, "r");}
+	if (NULL != fopen(fileName, "r")){
+		fp = fopen(fileName, "r");
 		//sends a message to the server to go to the 'store' option
-		write(sockfd, "4", 20);
+		write(sockfd, "4", 20);	//step 1
 		buffer[0]='0';
 		//keeps reading from the socket until the server is ready to recieve a file.
-		while ('0' == buffer[0]){
-			read(sockfd, buffer, 255);
+		while ('0' == buffer[0]){//step 4
+			read(sockfd, buffer, 256);
 		}
 		//writes sends the file name to the server
-		write(sockfd, buffer, 255);
-		//slight pause
-		system("sleep 1s");
+		while ('4' == buffer[0]){
+		write(sockfd, fileName, 255);//step 5
+		read(sockfd, buffer, 255);//step 7
+		}
 		//puts contents of file into socket
-		while (fscanf(fp, "%s ", buffer) != EOF){
-			write(sockfd, buffer, 255);
+		while (fscanf(fp, "%s ", buffer) != EOF){//step 8
+			write(sockfd, buffer, 256);
 			write(sockfd, " ", 20);
 		}
-	//	write(sockfd, EOF, 255);
+		fclose(fp);
+		}
 }
 void quit()
 {

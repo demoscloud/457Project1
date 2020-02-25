@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-void dostuff(int); /* function prototype */
+int dostuff(int); /* function prototype */
 void error(char *msg)
 {
     perror(msg);
@@ -50,7 +50,9 @@ int main(int argc, char *argv[])
              error("ERROR on fork");
          if (pid == 0)  {
              close(sockfd);
-             dostuff(newsockfd);
+            
+	    //does stuff 
+	     dostuff(newsockfd);
              exit(0);
          }
          else close(newsockfd);
@@ -63,7 +65,7 @@ int main(int argc, char *argv[])
  for each connection.  It handles all communication
  once a connnection has been established.
  *****************************************/
-void dostuff (int sock)
+int dostuff (int sock)
 {
 //	printf("entered doStuff\n");//debug line
    int n;
@@ -93,32 +95,34 @@ void dostuff (int sock)
 
 
 
-
+   //client -> server transfer
    //retrieve function
-   else if ('4' == buffer[0]){
+   else if ('4' == buffer[0]){//step 2
+	   int c = 0;
+	   char *fileName;
+	   fileName = (char*) malloc(sizeof(256));
 	printf("Got a request to store a file\n");
 	system("sleep 5s");
 	//asks client for name of file
-	write(sock, "4", 20);
+	write(sock, "4", 20);//step 3
 	//reads file name from socket 
 	while ('4' == buffer[0]){
-	read(sock, buffer, 255);
+		read(sock, buffer, 256);
+		//opens a file with requested name
+		fp = fopen(buffer, "w");
+		//once fileName is caught, sends signal to client to stop
+		write(sock, "1", 20);	//step 6
 	}
-	for (int i = 0; i < 250; i++){
-	       if ('0' != buffer[i]){
-		buffer[i]= '.';
-		buffer[i+1] = 't';
-		buffer[i+2] = 'x';
-		buffer[i+3] = 't';
-	       }
-			       }
-	//opens a file with the new file name
-	fp= fopen(buffer, "w");
-	printf("opening file %s", buffer);
-	//reads from socket into file until it stops recieving 
-	while (read(socket, b, 256)>0){
-		fputs(b, fp);
+
+	//reads from stocket to newly created file
+	while (read(sock, buffer, 256)>0 && c != EOF){
+		printf("%s", buffer);
+		fputs(buffer, fp);
+		c = fgetc(fp);
 	}
+
+	printf("Finished reading file\n\n");
+
 	//closes file
 	fclose(fp);
    }
@@ -126,7 +130,7 @@ void dostuff (int sock)
 
 
 
-
+   //server -> client transfer
    //takes in a file name and if it's valid, returns the file to client
    else if (NULL != fopen(buffer, "r")){
 	fp = fopen(buffer, "r");
@@ -155,5 +159,6 @@ void dostuff (int sock)
 	while (c != EOF);
 	fclose(fp);
    }
+   return 0;
    //end Olivia code
 }
