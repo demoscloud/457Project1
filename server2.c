@@ -67,9 +67,10 @@ void dostuff (int sock)
 {
 //	printf("entered doStuff\n");//debug line
    int n;
-   char buffer[256];
-   char b[255];
+   char buffer[256]= {0};
+   char b[256];
    bzero(buffer,256);
+   bzero(b, 256);
    n = read(sock,buffer,255);
    if (n < 0) error("ERROR reading from socket");
    //start Olivia Code
@@ -89,6 +90,43 @@ void dostuff (int sock)
 	fclose(fp);
 	system("rm dummyFile.txt");
    }
+
+
+
+
+   //retrieve function
+   else if ('4' == buffer[0]){
+	printf("Got a request to store a file\n");
+	system("sleep 5s");
+	//asks client for name of file
+	write(sock, "4", 20);
+	//reads file name from socket 
+	while ('4' == buffer[0]){
+	read(sock, buffer, 255);
+	}
+	for (int i = 0; i < 250; i++){
+	       if ('0' != buffer[i]){
+		buffer[i]= '.';
+		buffer[i+1] = 't';
+		buffer[i+2] = 'x';
+		buffer[i+3] = 't';
+	       }
+			       }
+	//opens a file with the new file name
+	fp= fopen(buffer, "w");
+	printf("opening file %s", buffer);
+	//reads from socket into file until it stops recieving 
+	while (read(socket, b, 256)>0){
+		fputs(b, fp);
+	}
+	//closes file
+	fclose(fp);
+   }
+
+
+
+
+
    //takes in a file name and if it's valid, returns the file to client
    else if (NULL != fopen(buffer, "r")){
 	fp = fopen(buffer, "r");
@@ -102,7 +140,10 @@ void dostuff (int sock)
       	fclose(fp);
    }
    //store function takes files from client and stores on server side
+   //if the user put in an invalid file to retrieve, the server will create a trash file
+   //with the contents being that filename
    else{
+	
 	fp = fopen("clientFile.txt", "w");
 	int c;
 	do{
