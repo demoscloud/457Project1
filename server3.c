@@ -83,28 +83,19 @@ void dostuff(int sock)
     if ('2' == buffer[0])
     {
         //puts all the output into a new file
-        printf("\nline 1\n");
         system("ls >> dummyFile.txt");
-        printf("\nline 2\n");
         fp = fopen("dummyFile.txt", "r");
 
-        printf("\nline 3\n");
         while (fscanf(fp, "%s ", b) != EOF)
         {
-            printf("\nline 4\n");
             n = write(sock, b, 255);
-            printf("\nline 5\n");
             n = write(sock, " ", 255);
-            printf("\nline 6\n");
             if (n < 0)
                 error("fscanf failed to write to socket");
         }
 
-        printf("\nline 7\n");
         fclose(fp);
-        printf("\nline 8\n");
         system("rm dummyFile.txt");
-        printf("\nfinished\n");
     }
 
     //retrieve function
@@ -174,4 +165,14 @@ void dostuff(int sock)
         fclose(fp);
     }
     //end Olivia code
+
+    //check for more commands
+    printf("\nCONTINUE\n");
+    n = write(sock, "exit", 4);
+    n = read(sock, buffer, 255);
+    if (n < 0)
+        error("ERROR reading from socket");
+    if('1' == buffer[0]){
+        dostuff(sock);
+    }
 }

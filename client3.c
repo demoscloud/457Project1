@@ -11,6 +11,7 @@ void list(int sockfd);
 void retrieve(int sockfd);
 void store(int sockfd);
 void quit();
+void continuing(int sock);
 void error(char *msg)
 {
     perror(msg);
@@ -76,7 +77,7 @@ int selectCommand()
         printf("Input Command:");
         scanf("%s", &str);
         n = atoi(str);
-        if (n == 0 || n > 5)
+        if (n <= 0 || n > 5)
         {
             printf("\nInvalid Input, try again\n");
             n = -1;
@@ -133,31 +134,26 @@ void list(int sockfd)
     //this is the file we write to
 
     FILE *fp;
-    printf("\nline 1\n");
     char buffer[255];
     //opens the file
-    printf("\nline 2\n");
     fp = fopen("gotThis.txt", "w");
     //send a command to the server "2"
-    printf("\nline 3\n");
     write(sockfd, "2", 18);
     //reads from socket and outputs to screen
-    printf("\nline 4\n");
     while (read(sockfd, buffer, 255) > 0)
     {
         //prints file names from socket
-        printf("\nline 5\n");
         printf("\n%s", buffer);
-        printf("\nline 6\n");
         fputs(buffer, fp);
+        if((strcmp(buffer, "exit")) == 0){
+            break;
+        }
     }
     //closes file
-    printf("\nline 7\n");
     fclose(fp);
     //removes unnecessary file that has list of server's files
-    printf("\nline 8\n");
     system("rm gotThis.txt");
-    printf("\nfinished\n");
+    continuing(sockfd);
 }
 
 /**
@@ -241,4 +237,21 @@ void quit()
 {
     printf("\nExiting Now\n");
     exit(0);
+}
+
+void continuing(int sock){
+    printf("\ncontinuing\n");
+    char str[5] = "hi";
+    int n = 0, i = 0;
+    while(n != 1 && n != 2 && i != 5){
+        printf("\nContinue?\n1.YES\n2.NO\n");
+        scanf("%s", &str);
+        n = atoi(str);
+        i++;
+    }
+    write(sock, str, strlen(str));
+    if(n != 1){
+        printf("\nQuit Selected");
+        quit();
+    }
 }
