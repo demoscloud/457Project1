@@ -11,7 +11,9 @@ void list(int sockfd);
 void retrieve(int sockfd);
 void store(int sockfd);
 void quit();
+void continuing(int sock);
 void error(char *msg)
+	
 {
     perror(msg);
     exit(0);
@@ -29,12 +31,18 @@ int main(int argc, char *argv[])
         {
             sockfd = connectServer();
         }
+	else if (1==i){
+		printf("Already connected\n");
+	}
+	else if(5 == i){
+		quit();
+	} else if (0 == sockfd){
+		printf("please connect first");
+	}
 	//list function
-        else if (i == 2)
+        else if (i == 2 )
         {
-		if (0 != sockfd) //only attempts list function is socket has been connected
             list(sockfd);
-		else i = 0;  //if not connected, goes back to the start of the loop and picks a new command
         }
         else if (i == 3)
         {
@@ -43,10 +51,6 @@ int main(int argc, char *argv[])
         else if (i == 4)
         {
             store(sockfd);
-        }
-        else if (i == 5)
-        {
-            quit();
         }
     }
     printf("\nerror executing command\n");
@@ -58,13 +62,13 @@ int selectCommand()
     int n = -1;
     int i = 0;
     char str[5];
-    while (n == -1 && i < 5)
+    while (n ==-1 )//debug removed && i<5 condition
     {
         printf("1.Connect\n2.List\n3.Retrieve\n4.Store\n5.Quit\n");
         printf("Input Command:");
         scanf("%s", &str);
         n = atoi(str);
-        if (n == 0 || n > 5)
+        if (n <= 0 || n > 5)
         {
             printf("\nInvalid Input, try again\n");
             n = -1;
@@ -111,10 +115,16 @@ int connectServer()
         error("ERROR connecting");
     return sockfd;
 }
-void list(int sockfd)
 
-{
-	//this is the file we write two
+
+/**
+ * Number 2 List command
+ *
+ * Client sends request to server for the list of files available in the server's directory
+ * The file names are printed on screen
+ **/
+void list(int sockfd){
+	//this is the file we write to
 	FILE* fp;
 	char buffer[255];
 	//opens the file
@@ -123,19 +133,26 @@ void list(int sockfd)
 	write(sockfd,"2", 18);
 	//reads from socket and outputs to screen
 	while ( read(sockfd, buffer, 255) > 0){
-       //prints file names from socket
+       		//looping through menue
+		
+	//prints file names from socket
 	printf("\n%s", buffer);
 	
 	fputs(buffer, fp);
+	if (strcmp(buffer, "exit") ==0) break;
 	}
 	//closes file
 	fclose(fp);
 	//removes unnecessary file that has list of server's files
 	system("rm gotThis.txt");
-    
+       
+	//menu management
+	continuing(sockfd);
 }
 /**
- * funciton to get a file from the server
+ * Number 3 Retrieve command
+ *
+ * function to get a file from the server and store it on the client side
  * */
 void retrieve(int sockfd)
 {
@@ -148,11 +165,12 @@ void retrieve(int sockfd)
     int c;
 
     do {
-	    //gets filename from upser
+	//gets filename from upser
 	printf("Enter file name to retrieve: \n");
 	scanf("%s", fileName);
 	//sends file request to server
 	write(sockfd,  fileName, 256);
+
 	//creates file
 	fp= fopen(fileName, "w");
 	//scans input from socket until no more info is sent
@@ -161,30 +179,35 @@ void retrieve(int sockfd)
 	}
 
 	c = fgetc(fp);//checks if last character in file is empty
-//	if (c ==EOF){
-//	free(fp); //deletes empty file
 	}
     //if last character in file indicates the end of the file, it stops reading the file
     while (c !=EOF || '3'== buffer[0]);
+	
 	fclose(fp);
-	//memory management for file name and buffer
-    free(fileName);
-    }	    
+//	continuing(sockfd);    
+}	    
 
     /**
+     * Number 4 Store command
+     *
      * store function moves file from client to server
+     * if the file doesn't exist, nothing happens
      * */
 void store(int sockfd)
 {
-	FILE *fp;
+	FILE *fp; //file being read from
 	char buffer[256] = {0};
 	char *fileName;
 	fileName = (char*) malloc(sizeof(255));
-    printf("\nEnter name of file to store: \n");
-    scanf("%s", fileName);
     
-	//if user passes a valid file name, send the file
+	//asks client what file they want to store
+	printf("\nEnter name of file to store: \n");
+	//scans user input into fileName
+	scanf("%s", fileName);
+    
+	//if user passes a valid file name, client sends the file
 	if (NULL != fopen(fileName, "r")){
+		//opens the file
 		fp = fopen(fileName, "r");
 		//sends a message to the server to go to the 'store' option
 		write(sockfd, "4", 20);	//step 1
@@ -204,10 +227,37 @@ void store(int sockfd)
 			write(sockfd, " ", 20);
 		}
 		fclose(fp);
-		}
+		} else printf("File not found\n");
+			
+		
+	free(fileName);
+	//menu management
+//	continuing(sockfd);
 }
+
 void quit()
 {
     printf("\nExiting Now\n");
     exit(0);
 }
+
+
+//menu management
+void continuing(int sock){
+	printf("Continuing called\n");
+	char str[5] = "hi";
+	int n =0;
+	int i =0;
+	while (n !=1 && n != 2 && i != 5){
+		printf("\n Continue?\n1. YES\n 2. NO\n");
+		scanf("%s", &str);
+		n = atoi(str);
+		i++;
+	}
+	write(sock, str, strlen(str));
+	if (n!= 1){
+		printf("\nQuit Selected\n");
+			quit();
+	}
+}
+

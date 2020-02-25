@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-int dostuff(int); /* function prototype */
+void dostuff(int); /* function prototype */
 void error(char *msg)
 {
     perror(msg);
@@ -65,9 +65,8 @@ int main(int argc, char *argv[])
  for each connection.  It handles all communication
  once a connnection has been established.
  *****************************************/
-int dostuff (int sock)
+void dostuff (int sock)
 {
-//	printf("entered doStuff\n");//debug line
    int n;
    char buffer[256]= {0};
    char b[256];
@@ -75,8 +74,8 @@ int dostuff (int sock)
    bzero(b, 256);
    n = read(sock,buffer,255);
    if (n < 0) error("ERROR reading from socket");
-   //start Olivia Code
    FILE* fp; //file pointer for file created 
+   
    //checks if user inputs command 2 for list
    if ('2'== buffer[0]){
 	   //puts all the output into a new file 
@@ -91,11 +90,12 @@ int dostuff (int sock)
 
 	fclose(fp);
 	system("rm dummyFile.txt");
+	n = write(sock, "exit", 4);
    }
 
 
 
-   //client -> server transfer
+   //client file -> server side transfer
    //retrieve function
    else if ('4' == buffer[0]){//step 2
 	   int c = 0;
@@ -125,12 +125,13 @@ int dostuff (int sock)
 
 	//closes file
 	fclose(fp);
+	free(fileName);
    }
 
 
 
 
-   //server -> client transfer
+   //server file  -> client side  transfer
    //takes in a file name and if it's valid, returns the file to client
    else if (NULL != fopen(buffer, "r")){
 	fp = fopen(buffer, "r");
@@ -147,18 +148,16 @@ int dostuff (int sock)
    //if the user put in an invalid file to retrieve, the server will create a trash file
    //with the contents being that filename
    else{
-	
-	fp = fopen("clientFile.txt", "w");
-	int c;
-	do{
-		read(sock, buffer, 255);
-		fputs(buffer, fp);
-		fputs(" ", fp);
-		c = fgetc(buffer);
-	}
-	while (c != EOF);
-	fclose(fp);
+	   printf("client wants a file that doesn't exist");
    }
-   return 0;
-   //end Olivia code
+
+   
+	system("sleep 10s");
+	n = read(sock, buffer, 255);
+	if (n <0)
+		error ("error reading from socket");
+	if ('1' == buffer[0])
+	    dostuff(sock);
+
+
 }
