@@ -11,6 +11,7 @@ void list(int sockfd);
 void retrieve(int sockfd);
 void store(int sockfd);
 void quit();
+void continuing(int sock);
 void error(char *msg)
 {
     perror(msg);
@@ -24,34 +25,47 @@ int main(int argc, char *argv[])
     while (i >= 0)
     {
         i = selectCommand();
-	//only sets socket if user input is 1 and sockfd hasn't been connected prior
+        //only sets socket if user input is 1 and sockfd hasn't been connected prior
         if (i == 1 && 0 == sockfd)
         {
             sockfd = connectServer();
         }
-	//list function
+        //if socket is connected, don't do anything
+        else if (i == 1)
+        {
+            printf("Already Connected\n");
+        }
+        //can quit, even without socket connected
+        else if (i == 5)
+        {
+            quit();
+        }
+        //to do anything except connect or quit, socket must be connected
+        else if (sockfd == 0)
+        {
+            printf("\nPlease connect first\n");
+        }
+        //list function
         else if (i == 2)
         {
-		if (0 != sockfd) //only attempts list function is socket has been connected
             list(sockfd);
         }
+        //retrieve function
         else if (i == 3)
         {
             retrieve(sockfd);
         }
+        //store function
         else if (i == 4)
         {
             store(sockfd);
-        }
-        else if (i == 5)
-        {
-            quit();
         }
     }
     printf("\nerror executing command\n");
     return 0;
 }
 
+//offers menu of options and retrieves user input
 int selectCommand()
 {
     int n = -1;
@@ -63,7 +77,7 @@ int selectCommand()
         printf("Input Command:");
         scanf("%s", &str);
         n = atoi(str);
-        if (n == 0 || n > 5)
+        if (n <= 0 || n > 5)
         {
             printf("\nInvalid Input, try again\n");
             n = -1;
@@ -74,6 +88,7 @@ int selectCommand()
     return n;
 }
 
+//connects to the server and returns the socket number
 int connectServer()
 {
     char host[20];
@@ -97,91 +112,166 @@ int connectServer()
     if (sockfd < 0)
         error("Error opening socket");
     server = gethostbyname(host);
-    if(server == NULL){
+    if (server == NULL)
+    {
         error("ERROR no such host\n");
     }
-    bzero((char *) &serv_addr, sizeof(serv_addr));
+    bzero((char *)&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, 
-         (char *)&serv_addr.sin_addr.s_addr,
-         server->h_length);
+    bcopy((char *)server->h_addr,
+          (char *)&serv_addr.sin_addr.s_addr,
+          server->h_length);
     serv_addr.sin_port = htons(portNum);
-    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
         error("ERROR connecting");
     return sockfd;
 }
+
+//list function, client side
 void list(int sockfd)
-
 {
-	//this is the file we write two
-	FILE* fp;
-	char buffer[255];
-	//opens the file
-	fp = fopen("gotThis.txt", "w");
-	//send a command to the server "2"
-	write(sockfd,"2", 18);
-	//reads from socket and outputs to screen
-	while ( read(sockfd, buffer, 255) > 0){
-       //prints file names from socket
-	printf("%s\n", buffer);
-	
-	fputs(buffer, fp);
-	}
+    printf("\nList:\n");
+    //this is the file we write to
 
-	fclose(fp);
-	//deletes unnecesary file
-	system("rm gotThis.txt");
-
-//	free(fp);
-    
+    FILE *fp;
+    char buffer[255];
+    //opens the file
+    fp = fopen("gotThis.txt", "w");
+    //send a command to the server "2"
+    write(sockfd, "2", 18);
+    //reads from socket and outputs to screen
+    while (read(sockfd, buffer, 255) > 0)
+    {
+        //prints file names from socket
+        printf("\n%s", buffer);
+        fputs(buffer, fp);
+        if ((strcmp(buffer, "exit")) == 0)
+        {
+            break;
+        }
+    }
+    //closes file
+    fclose(fp);
+    //removes unnecessary file that has list of server's files
+    system("rm gotThis.txt");
+    continuing(sockfd);
 }
+///////////////////////////////////////////////////////////////
+/**
+ * funciton to get a file from the server
+ * */
 void retrieve(int sockfd)
 {
-    printf("\nretrieve\n");
+    printf("\nRetrieve:\n");
 
     FILE *fp;
     char buffer[256];
-    char *fileName;	//name of file to be read in.  256 char limit
-    fileName = (char*) malloc(sizeof(255));
+    char *fileName; //name of file to be read in.  256 char limit
+    fileName = (char *)malloc(sizeof(255));
     int c;
 
-    do {
-    scanf("%s", fileName);
-    write(sockfd,  fileName, 256);
-    fp= fopen(fileName, "w");
-	while (read (sockfd, buffer, 256) > 0){
-		fputs(buffer, fp);
-	}
+    do
+    {
+        //gets filename from upser
+        printf("Enter file name to retrieve: \n");
+        scanf("%s", fileName);
+        //sends file request to server
+        write(sockfd, fileName, 256);
+        //creates file
+        fp = fopen(fileName, "w");
+        //scans input from socket until no more info is sent
+        while (read(sockfd, buffer, 256) > 0)
+        {
+            fputs(buffer, fp);
+        }
 
-	c = fgetc(fp);//checks if character in file is empty
-//	if (c ==EOF){
-//	free(fp); //deletes empty file
-	}
-    while (c !=EOF || '3'== buffer[0]);
-	fclose(fp);
-	//memory management for file
+        c = fgetc(fp);
+        //checks if last character in file is empty
+        //	if (c ==EOF){
+        //	free(fp); //deletes empty file
+    }
+    //if last character in file indicates the end of the file, it stops reading the file
+
+    while (c != EOF || '3' == buffer[0]);
+    fclose(fp);
+    //memory management for file name and buffer
     free(fileName);
 }
+
+/****
+* store function moves file from client to server
+****/
 void store(int sockfd)
 {
-	FILE *fp;
-	char buffer[255];
+    printf("\nStore:\n");
+    FILE *fp;
+    char buffer[256] = {0};
+    char *fileName;
+    fileName = (char *)malloc(sizeof(255));
     printf("\nEnter name of file to store: \n");
-    scanf("%s", buffer);
-    
-	//if user passes a valid file name, send the file
-	if (NULL != fopen(buffer, "r")){
-		fp = fopen(buffer, "r");}
-		write(sockfd, buffer, 255);
-		//puts contents of file into socket
-		while (fscanf(fp, "%s ", buffer) != EOF){
-			write(sockfd, buffer, 255);
-			write(sockfd, " ", 20);
-		}
-	//	write(sockfd, EOF, 255);
+    scanf("%s", fileName);
+
+    //if user passes a valid file name, send the file
+    if (NULL != fopen(fileName, "r"))
+    {
+        fp = fopen(fileName, "r");
+        char ack[20];
+        //sends a message to the server to go to the 'store' option
+        write(sockfd, "4", 20); //step 1
+        buffer[0] = '0';
+        //keeps reading from the socket until the server is ready to recieve a file.
+        while ('0' == buffer[0])
+        { //step 4
+            read(sockfd, buffer, 256);
+        }
+        //writes sends the file name to the server
+        while ('4' == buffer[0])
+        {
+            write(sockfd, fileName, 255); //step 5
+            read(sockfd, buffer, 255);    //step 7
+        }
+        //puts contents of file into socket
+        while (fscanf(fp, "%s", buffer) != EOF)
+        { //step 8
+            printf("\nwriting buffer: %s\n", buffer);
+            write(sockfd, buffer, 256);
+            read(sockfd, ack, 20);
+            printf("\nAck: %s\n", ack);
+            write(sockfd, " ", 20);
+            read(sockfd, ack, 20);
+        }
+        fclose(fp);
+        //exit procedure
+        write(sockfd, "exit", 4);
+        printf("\ncontinuing\n");
+        continuing(sockfd);
+    }
+    else{
+        printf("invalid file\n");
+    }
+    free(fileName);
 }
 void quit()
 {
     printf("\nExiting Now\n");
     exit(0);
+}
+
+void continuing(int sock)
+{
+    char str[5] = "hi";
+    int n = 0, i = 0;
+    while (n != 1 && n != 2 && i != 5)
+    {
+        printf("\nContinue?\n1.YES\n2.NO\n");
+        scanf("%s", &str);
+        n = atoi(str);
+        i++;
+    }
+    write(sock, str, strlen(str));
+    if (n != 1)
+    {
+        printf("\nQuit Selected");
+        quit();
+    }
 }
