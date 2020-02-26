@@ -145,12 +145,12 @@ void list(int sockfd)
     while (read(sockfd, buffer, 255) > 0)
     {
         //prints file names from socket
-        printf("\n%s", buffer);
-        fputs(buffer, fp);
         if ((strcmp(buffer, "exit")) == 0)
         {
             break;
         }
+        printf("\n%s", buffer);
+        fputs(buffer, fp);
     }
     //closes file
     fclose(fp);
@@ -241,17 +241,17 @@ void store(int sockfd)
         //puts contents of file into socket
         while (fscanf(fp, "%s", buffer) != EOF)
         { //step 8
-            printf("\nwriting buffer: %s\n", buffer);
+            //printf("\nwriting buffer: %s\n", buffer);
             write(sockfd, buffer, 256);
             read(sockfd, ack, 20);
-            printf("\nAck: %s\n", ack);
+            //printf("\nAck: %s\n", ack);
             write(sockfd, " ", 20);
             read(sockfd, ack, 20);
         }
         fclose(fp);
         //exit procedure
         write(sockfd, "exit", 4);
-        printf("\ncontinuing\n");
+        //printf("\ncontinuing\n");
         continuing(sockfd);
     }
     else
